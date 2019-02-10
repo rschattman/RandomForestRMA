@@ -1,0 +1,34 @@
+---
+title: "Data_setup"
+author: "Rachel Schattman"
+date: "February 10, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load libraries
+```{r}
+library(dplyr)
+library(plyr)
+
+```
+
+```{r}
+script_path <- "C:/Users/rschattman/Documents/Research/RandomForestRMA/data"
+in_dir <- "C:/Users/rschattman/Documents/Research/RandomForestRMA/data"
+out_dir <- "C:/Users/rschattman/Documents/Research/RandomForestRMA/output/data"
+```
+
+```{r}
+
+weather <- read.csv(file = "C:/Users/rschattman/Documents/Research/RandomForestRMA/data/combine.csv", header = TRUE, sep = ",")
+```
+
+```{r}
+#transform into weekly sums
+summarise(newVal = sum(weather$precip))
+df <- precipitation %>% group_by(precip) %>% summarise(sum = sum(value)) )
+```
