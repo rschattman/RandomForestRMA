@@ -60,18 +60,38 @@ summary(PAtest)
 
 # Create Random Forest Model and test performance metrics
 ```{r}
-Mod1 <- randomForest(DryAcres ~ ., data = PAtrain, method = "anova", importance = TRUE)
+Mod1 <- randomForest(DryAcres ~ ., 
+                     data = PAtrain, 
+                     ntree = 500, 
+                     #method = "anova", 
+                     importance = TRUE)
 Mod1
 plot(Mod1)
 pred <- predict(object = Mod1, newdata = PAtest)
 RMSE_Mod1 <- rmse(actual = PAtest$DryAcres, #actual values
      predicted = pred)                      #predicted values
 print(RMSE_Mod1/mean(PAtest$DryAcres))      #tells us the %of the mean represented by RMSE. AKA "coefficient of variation"
+summary(Mod1)
+print(Mod1)
+
+# Tune mtry using OOB error
+set.seed(1)
+#train_pred <- predict(object = Mod1, newdata = PAtrain)
+res <- tuneRF(x = PAtrain,
+              y = PAtrain$DryAcre,
+              ntree = 500,
+              doBest=FALSE)
+
+
 ```
 
 # Fine tune model using control function
 ```{r}
-Mod2 <- randomForest(DryAcres ~ ., data = PAtrain, ntree = 500, mtry = 3, importance = TRUE,
+Mod2 <- randomForest(DryAcres ~ ., 
+                     data = PAtrain, 
+                     ntree = 500, 
+                     mtry = 4,                                        # based on tuneRF function results above
+                     importance = TRUE,
                      control = rpart.control(minsplit = 20,           # default is 20
                                              cp = 0.01,               # default is 0.01
                                              maxdepth = 30))          # default is 30
