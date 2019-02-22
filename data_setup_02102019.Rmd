@@ -37,49 +37,63 @@ PAloss <- read.csv(file = "C:/Users/rschattman/Documents/Research/RandomForestRM
 PAbeta <-merge(PAcip, PAloss)
 ```
 
+# Create new data frames with one dependent variable
+``` {r}
+head(PAbeta)
+WetAcres <- PAbeta[,c("Year", "month", "StateCollege_PRCP", "Lebanon_PRCP", "Selinsgrove_PRCP", "WetAcres")]
+WetDollars <- PAbeta[,c("Year", "month", "StateCollege_PRCP", "Lebanon_PRCP", "Selinsgrove_PRCP", "WetDollars")]
+DryDollars <- PAbeta[,c("Year", "month", "StateCollege_PRCP", "Lebanon_PRCP", "Selinsgrove_PRCP", "DryDollars")]
+DryAcres <- PAbeta[,c("Year", "month", "StateCollege_PRCP", "Lebanon_PRCP", "Selinsgrove_PRCP", "DryAcres")]
+```
+
 # Review data
 ```{r}
-head(PAbeta)
-str(PAbeta)
-summary(PAbeta)
+head(WetAcres)
+str(WetAcres)
+summary(WetAcres)
 ```
 
 # Split into trainning, validation, and test sets
 ```{r}
 set.seed(25)
-assignment <- sample(1:3, size = nrow(PAbeta), prob = c(0.7, 0.15, 0.15), replace = TRUE)
+assignment <- sample(1:3, size = nrow(WetAcres), prob = c(0.7, 0.15, 0.15), replace = TRUE)
 
-PAtrain <- PAbeta[assignment == 1,]
-PAvalid <- PAbeta[assignment == 2,]
-PAtest <- PAbeta[assignment == 3,]
+Wettrain <- WetAcres[assignment == 1,]
+Wetvalid <- WetAcres[assignment == 2,]
+Wettest <- WetAcres[assignment == 3,]
 
-summary(PAtrain)
-summary(PAvalid)
-summary(PAtest)
+summary(Wettrain)
+summary(Wetvalid)
+summary(Wettest)
 ```
 
 # Create Random Forest Model and test performance metrics
 ```{r}
-Mod1 <- randomForest(DryAcres ~ ., 
-                     data = PAtrain, 
+Mod1 <- randomForest(WetAcres ~ ., 
+                     data = Wettrain, 
                      ntree = 500, 
                      #method = "anova", 
                      importance = TRUE)
-Mod1
-plot(Mod1)
-pred <- predict(object = Mod1, newdata = PAtest)
-RMSE_Mod1 <- rmse(actual = PAtest$DryAcres, #actual values
-     predicted = pred)                      #predicted values
-print(RMSE_Mod1/mean(PAtest$DryAcres))      #tells us the %of the mean represented by RMSE. AKA "coefficient of variation"
-summary(Mod1)
+
+
 print(Mod1)
+summary(Mod1)
+plot(Mod1)
+
+pred <- predict(object = Mod1, newdata = Wettest)
+RMSE_Mod1 <- rmse(actual = Wettest$WetAcres, #actual values
+     predicted = pred)                       #predicted values
+print(RMSE_Mod1/mean(Wettest$WetAcres))      #tells us the %of the mean represented by RMSE. AKA "coefficient of variation"
+
+
 
 # Tune mtry using OOB error
-set.seed(1)
+set.seed(25)
 #train_pred <- predict(object = Mod1, newdata = PAtrain)
-res <- tuneRF(x = PAtrain,
-              y = PAtrain$DryAcre,
+res <- tuneRF(x = Wettrain,
+              y = Wettrain$WetAcre,
               ntree = 500,
+              stepfactor = 0.5,
               doBest=FALSE)
 
 
@@ -87,20 +101,22 @@ res <- tuneRF(x = PAtrain,
 
 # Fine tune model using control function
 ```{r}
-Mod2 <- randomForest(DryAcres ~ ., 
-                     data = PAtrain, 
+Mod2 <- randomForest(WetAcres ~ ., 
+                     data = Wettrain, 
                      ntree = 500, 
-                     mtry = 4,                                        # based on tuneRF function results above
+                     mtry = 6,                                        # based on tuneRF function results above
                      importance = TRUE,
                      control = rpart.control(minsplit = 20,           # default is 20
                                              cp = 0.01,               # default is 0.01
                                              maxdepth = 30))          # default is 30
-Mod2
+print(Mod2)
+summary(Mod2)
 plot(Mod2)
-pred2 <- predict(object = Mod2, newdata = PAtest)
-RMSE_Mod2 <- rmse(actual = PAtest$DryAcres, #actual values
-     predicted = pred2)                     #predicted values
-print(RMSE_Mod2/mean(PAtest$DryAcres))      #tells us the %of the mean represented by RMSE. AKA "coefficient of variation"
+
+pred <- predict(object = Mod2, newdata = Wettest)
+RMSE_Mod2 <- rmse(actual = Wettest$WetAcres, #actual values
+     predicted = pred)                       #predicted values
+print(RMSE_Mod2/mean(Wettest$WetAcres))      #tells us the %of the mean represented by RMSE. AKA "coefficient of variation"
 
 #start here in AM
 #plotcp(Mod2)
