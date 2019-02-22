@@ -2,7 +2,9 @@
 title: "Data_setup"
 author: "Rachel Schattman"
 date: "February 19, 2019"
-output: html_document
+output:
+  word_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -125,6 +127,6 @@ print(RMSE_Mod2/mean(Wettest$WetAcres))      #tells us the %of the mean represen
 
 # Predicting on train set and checking classification accuracy
 ```{r}
-predTrain <- predict(Mod2, PAtrain, type = "class")
-table(predTrain, PAtrain$DryAcres)  
+#predTrain <- predict(Mod2, PAtrain, type = "class")
+#table(predTrain, PAtrain$DryAcres)  
 ```
