@@ -77,8 +77,7 @@ Mod1 <- randomForest(WetAcres ~ .,
                      #method = "anova", 
                      importance = TRUE)
 
-
-print(Mod1)
+print(Mod1)                                 # % of variance expalined is low. Tuning needed
 summary(Mod1)
 plot(Mod1)
 
@@ -96,12 +95,14 @@ res <- tuneRF(x = Wettrain,
               y = Wettrain$WetAcre,
               ntree = 500,
               stepfactor = 0.5,
-              doBest=FALSE)
-
-
+              doBest=TRUE,        # Returns a random forest model with optimal mtry value
+              localImp = TRUE)
+print(res)
+plot(res)
+res$localImportance
 ```
 
-# Fine tune model using control function
+# Other optinos for fine tuning the model using control function
 ```{r}
 Mod2 <- randomForest(WetAcres ~ ., 
                      data = Wettrain, 
