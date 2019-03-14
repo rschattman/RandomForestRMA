@@ -70,6 +70,7 @@ summary(Wettest)
 ```
 
 # Create Random Forest Model and test performance metrics
+## Wet Acres
 ```{r}
 Mod1 <- randomForest(WetAcres ~ ., 
                      data = Wettrain, 
@@ -96,11 +97,70 @@ res <- tuneRF(x = Wettrain,
               ntree = 500,
               stepfactor = 0.5,
               doBest=TRUE,        # Returns a random forest model with optimal mtry value
-              localImp = TRUE)
+              importance = TRUE)
+              #localImp = TRUE)
 print(res)
 plot(res)
-res$localImportance
+res$importance
+varImpPlot(res)                      
 ```
+
+## Wet Dollars
+```{r}
+# Split into trainning, validation, and test sets
+set.seed(25)
+assignment <- sample(1:3, size = nrow(WetDollars), prob = c(0.7, 0.15, 0.15), replace = TRUE)
+
+Wettrain2 <- WetDollars[assignment == 1,]
+Wetvalid2 <- WetDollars[assignment == 2,]
+Wettest2 <- WetDollars[assignment == 3,]
+
+summary(Wettrain2)
+summary(Wetvalid2)
+summary(Wettest2)
+
+
+Mod2 <- randomForest(WetDollars ~ ., 
+                     data = Wettrain2, 
+                     ntree = 500, 
+                     #method = "anova", 
+                     importance = TRUE)
+
+print(Mod2)                                 # % of variance expalined is low. Tuning needed
+summary(Mod2)
+plot(Mod2)
+
+pred2 <- predict(object = Mod2, newdata = Wettest2)
+RMSE_Mod2 <- rmse(actual = Wettest2$WetDollars, #actual values
+     predicted = pred2)                        #predicted values
+print(RMSE_Mod2/mean(Wettest2$WetDollars))      #tells us the %of the mean represented by RMSE. AKA "coefficient of variation"
+
+
+# Tune mtry using OOB error
+set.seed(25)
+#train_pred <- predict(object = Mod1, newdata = PAtrain)
+res2 <- tuneRF(x = Wettrain2,
+              y = Wettrain2$WetDollars,
+              ntree = 500,
+              stepfactor = 0.5,
+              doBest=TRUE,        # Returns a random forest model with optimal mtry value
+              importance = TRUE)
+              #localImp = TRUE)
+print(res2)
+plot(res2)
+res2$importance
+varImpPlot(res2)                      
+```
+
+
+
+
+
+
+
+
+
+
 
 # Other optinos for fine tuning the model using control function
 ```{r}
