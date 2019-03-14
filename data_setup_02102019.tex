@@ -106,7 +106,7 @@
 \usepackage{titling}
 
 % Create subtitle command for use in maketitle
-\newcommand{\subtitle}[1]{
+\providecommand{\subtitle}[1]{
   \posttitle{
     \begin{center}\large#1\end{center}
     }
@@ -148,10 +148,6 @@
 \end{verbatim}
 
 \begin{verbatim}
-## Warning: package 'plyr' was built under R version 3.5.2
-\end{verbatim}
-
-\begin{verbatim}
 ## -------------------------------------------------------------------------
 \end{verbatim}
 
@@ -178,7 +174,7 @@
 \end{verbatim}
 
 \begin{verbatim}
-## Warning: package 'randomForest' was built under R version 3.5.2
+## Warning: package 'randomForest' was built under R version 3.5.3
 \end{verbatim}
 
 \begin{verbatim}
@@ -201,11 +197,7 @@
 \end{verbatim}
 
 \begin{verbatim}
-## Warning: package 'Metrics' was built under R version 3.5.2
-\end{verbatim}
-
-\begin{verbatim}
-## Warning: package 'rpart' was built under R version 3.5.2
+## Warning: package 'Metrics' was built under R version 3.5.3
 \end{verbatim}
 
 \section{Helpful resources:}\label{helpful-resources}
@@ -409,6 +401,8 @@ sets}\label{split-into-trainning-validation-and-test-sets}
 \section{Create Random Forest Model and test performance
 metrics}\label{create-random-forest-model-and-test-performance-metrics}
 
+\subsection{Wet Acres}\label{wet-acres}
+
 \begin{Shaded}
 \begin{Highlighting}[]
 \NormalTok{Mod1 <-}\StringTok{ }\KeywordTok{randomForest}\NormalTok{(WetAcres ~}\StringTok{ }\NormalTok{., }
@@ -417,8 +411,7 @@ metrics}\label{create-random-forest-model-and-test-performance-metrics}
                      \CommentTok{#method = "anova", }
                      \DataTypeTok{importance =} \OtherTok{TRUE}\NormalTok{)}
 
-
-\KeywordTok{print}\NormalTok{(Mod1)}
+\KeywordTok{print}\NormalTok{(Mod1)                                 }\CommentTok{# % of variance expalined is low. Tuning needed}
 \end{Highlighting}
 \end{Shaded}
 
@@ -492,26 +485,770 @@ metrics}\label{create-random-forest-model-and-test-performance-metrics}
               \DataTypeTok{y =} \NormalTok{Wettrain$WetAcre,}
               \DataTypeTok{ntree =} \DecValTok{500}\NormalTok{,}
               \DataTypeTok{stepfactor =} \FloatTok{0.5}\NormalTok{,}
-              \DataTypeTok{doBest=}\OtherTok{FALSE}\NormalTok{)}
+              \DataTypeTok{doBest=}\OtherTok{TRUE}\NormalTok{,        }\CommentTok{# Returns a random forest model with optimal mtry value}
+              \DataTypeTok{importance =} \OtherTok{TRUE}\NormalTok{)}
 \end{Highlighting}
 \end{Shaded}
 
 \begin{verbatim}
-## mtry = 2  OOB error = 113960412 
+## mtry = 2  OOB error = 104055217 
 ## Searching left ...
-## mtry = 1     OOB error = 581259692 
-## -4.10054 0.05 
+## mtry = 1     OOB error = 665119338 
+## -5.391985 0.05 
 ## Searching right ...
-## mtry = 4     OOB error = 1979749 
-## 0.9826277 0.05 
-## mtry = 6     OOB error = 578921.1 
-## 0.7075786 0.05
+## mtry = 4     OOB error = 2698725 
+## 0.9740645 0.05 
+## mtry = 6     OOB error = 220350 
+## 0.9183503 0.05
 \end{verbatim}
 
 \includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-7-2.pdf}
 
-\section{Fine tune model using control
-function}\label{fine-tune-model-using-control-function}
+\begin{Shaded}
+\begin{Highlighting}[]
+              \CommentTok{#localImp = TRUE)}
+\KeywordTok{print}\NormalTok{(res)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+##  randomForest(x = x, y = y, mtry = res[which.min(res[, 2]), 1],      importance = TRUE, stepfactor = 0.5) 
+##                Type of random forest: regression
+##                      Number of trees: 500
+## No. of variables tried at each split: 6
+## 
+##           Mean of squared residuals: 182323
+##                     % Var explained: 99.99
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(res)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-7-3.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{res$importance}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                        %IncMSE IncNodePurity
+## Year               234384347.4  1.705639e+10
+## month                 128183.8  5.548648e+04
+## StateCollege_PRCP    3052427.8  7.795892e+06
+## Lebanon_PRCP          115510.7  7.563779e+07
+## Selinsgrove_PRCP     -184268.7  1.015508e+07
+## WetAcres          6960489329.8  5.724630e+11
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{varImpPlot}\NormalTok{(res)                      }
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-7-4.pdf}
+
+\subsection{Wet Dollars}\label{wet-dollars}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Split into trainning, validation, and test sets}
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{25}\NormalTok{)}
+\NormalTok{assignment <-}\StringTok{ }\KeywordTok{sample}\NormalTok{(}\DecValTok{1}\NormalTok{:}\DecValTok{3}\NormalTok{, }\DataTypeTok{size =} \KeywordTok{nrow}\NormalTok{(WetDollars), }\DataTypeTok{prob =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.7}\NormalTok{, }\FloatTok{0.15}\NormalTok{, }\FloatTok{0.15}\NormalTok{), }\DataTypeTok{replace =} \OtherTok{TRUE}\NormalTok{)}
+
+\NormalTok{Wettrain2 <-}\StringTok{ }\NormalTok{WetDollars[assignment ==}\StringTok{ }\DecValTok{1}\NormalTok{,]}
+\NormalTok{Wetvalid2 <-}\StringTok{ }\NormalTok{WetDollars[assignment ==}\StringTok{ }\DecValTok{2}\NormalTok{,]}
+\NormalTok{Wettest2 <-}\StringTok{ }\NormalTok{WetDollars[assignment ==}\StringTok{ }\DecValTok{3}\NormalTok{,]}
+
+\KeywordTok{summary}\NormalTok{(Wettrain2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       Year          month        StateCollege_PRCP  Lebanon_PRCP   
+##  Min.   :2001   Min.   : 1.000   Min.   : 1.620    Min.   : 0.910  
+##  1st Qu.:2005   1st Qu.: 4.000   1st Qu.: 5.270    1st Qu.: 6.335  
+##  Median :2009   Median : 7.000   Median : 8.050    Median : 9.330  
+##  Mean   :2009   Mean   : 6.638   Mean   : 8.831    Mean   : 9.718  
+##  3rd Qu.:2014   3rd Qu.:10.000   3rd Qu.:11.370    3rd Qu.:12.145  
+##  Max.   :2018   Max.   :12.000   Max.   :26.840    Max.   :39.150  
+##  Selinsgrove_PRCP   WetDollars      
+##  Min.   : 2.060   Min.   :  129986  
+##  1st Qu.: 5.400   1st Qu.: 1653080  
+##  Median : 7.920   Median : 7411996  
+##  Mean   : 8.842   Mean   : 8099715  
+##  3rd Qu.:11.660   3rd Qu.:14673803  
+##  Max.   :32.740   Max.   :20514682
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{summary}\NormalTok{(Wetvalid2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       Year          month        StateCollege_PRCP  Lebanon_PRCP   
+##  Min.   :2001   Min.   : 1.000   Min.   : 1.56     Min.   : 1.190  
+##  1st Qu.:2007   1st Qu.: 3.000   1st Qu.: 5.99     1st Qu.: 5.692  
+##  Median :2012   Median : 6.000   Median : 7.82     Median : 9.090  
+##  Mean   :2011   Mean   : 6.077   Mean   : 9.17     Mean   :11.616  
+##  3rd Qu.:2015   3rd Qu.: 9.000   3rd Qu.:12.43     3rd Qu.:15.155  
+##  Max.   :2018   Max.   :12.000   Max.   :22.57     Max.   :45.690  
+##  Selinsgrove_PRCP   WetDollars      
+##  Min.   : 0.000   Min.   :  129986  
+##  1st Qu.: 5.675   1st Qu.: 1668643  
+##  Median : 8.850   Median : 6842246  
+##  Mean   :10.449   Mean   : 8398955  
+##  3rd Qu.:12.215   3rd Qu.:14673803  
+##  Max.   :48.100   Max.   :20011028
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{summary}\NormalTok{(Wettest2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       Year          month        StateCollege_PRCP  Lebanon_PRCP  
+##  Min.   :2002   Min.   : 1.000   Min.   : 2.940    Min.   : 2.31  
+##  1st Qu.:2004   1st Qu.: 4.000   1st Qu.: 6.495    1st Qu.: 6.39  
+##  Median :2008   Median : 6.000   Median : 9.260    Median :10.04  
+##  Mean   :2009   Mean   : 6.074   Mean   : 9.480    Mean   :11.22  
+##  3rd Qu.:2014   3rd Qu.: 8.000   3rd Qu.:10.905    3rd Qu.:12.82  
+##  Max.   :2018   Max.   :12.000   Max.   :19.730    Max.   :33.07  
+##  Selinsgrove_PRCP   WetDollars      
+##  Min.   : 0.200   Min.   :  419619  
+##  1st Qu.: 5.165   1st Qu.: 1262458  
+##  Median : 8.960   Median : 7456851  
+##  Mean   : 9.075   Mean   : 8239412  
+##  3rd Qu.:11.850   3rd Qu.:11783443  
+##  Max.   :26.700   Max.   :20514682
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{Mod2 <-}\StringTok{ }\KeywordTok{randomForest}\NormalTok{(WetDollars ~}\StringTok{ }\NormalTok{., }
+                     \DataTypeTok{data =} \NormalTok{Wettrain2, }
+                     \DataTypeTok{ntree =} \DecValTok{500}\NormalTok{, }
+                     \CommentTok{#method = "anova", }
+                     \DataTypeTok{importance =} \OtherTok{TRUE}\NormalTok{)}
+
+\KeywordTok{print}\NormalTok{(Mod2)                                 }\CommentTok{# % of variance expalined is low. Tuning needed}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+##  randomForest(formula = WetDollars ~ ., data = Wettrain2, ntree = 500,      importance = TRUE) 
+##                Type of random forest: regression
+##                      Number of trees: 500
+## No. of variables tried at each split: 1
+## 
+##           Mean of squared residuals: 3.843481e+13
+##                     % Var explained: 20.23
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{summary}\NormalTok{(Mod2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                 Length Class  Mode     
+## call              5    -none- call     
+## type              1    -none- character
+## predicted       163    -none- numeric  
+## mse             500    -none- numeric  
+## rsq             500    -none- numeric  
+## oob.times       163    -none- numeric  
+## importance       10    -none- numeric  
+## importanceSD      5    -none- numeric  
+## localImportance   0    -none- NULL     
+## proximity         0    -none- NULL     
+## ntree             1    -none- numeric  
+## mtry              1    -none- numeric  
+## forest           11    -none- list     
+## coefs             0    -none- NULL     
+## y               163    -none- numeric  
+## test              0    -none- NULL     
+## inbag             0    -none- NULL     
+## terms             3    terms  call
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(Mod2)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-8-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pred2 <-}\StringTok{ }\KeywordTok{predict}\NormalTok{(}\DataTypeTok{object =} \NormalTok{Mod2, }\DataTypeTok{newdata =} \NormalTok{Wettest2)}
+\NormalTok{RMSE_Mod2 <-}\StringTok{ }\KeywordTok{rmse}\NormalTok{(}\DataTypeTok{actual =} \NormalTok{Wettest2$WetDollars, }\CommentTok{#actual values}
+     \DataTypeTok{predicted =} \NormalTok{pred2)                        }\CommentTok{#predicted values}
+\KeywordTok{print}\NormalTok{(RMSE_Mod2/}\KeywordTok{mean}\NormalTok{(Wettest2$WetDollars))      }\CommentTok{#tells us the %of the mean represented by RMSE. AKA "coefficient of variation"}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 0.6656554
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Tune mtry using OOB error}
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{25}\NormalTok{)}
+\CommentTok{#train_pred <- predict(object = Mod1, newdata = PAtrain)}
+\NormalTok{res2 <-}\StringTok{ }\KeywordTok{tuneRF}\NormalTok{(}\DataTypeTok{x =} \NormalTok{Wettrain2,}
+              \DataTypeTok{y =} \NormalTok{Wettrain2$WetDollars,}
+              \DataTypeTok{ntree =} \DecValTok{500}\NormalTok{,}
+              \DataTypeTok{stepfactor =} \FloatTok{0.5}\NormalTok{,}
+              \DataTypeTok{doBest=}\OtherTok{TRUE}\NormalTok{,        }\CommentTok{# Returns a random forest model with optimal mtry value}
+              \DataTypeTok{importance =} \OtherTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## mtry = 2  OOB error = 1.099613e+12 
+## Searching left ...
+## mtry = 1     OOB error = 7.33856e+12 
+## -5.673764 0.05 
+## Searching right ...
+## mtry = 4     OOB error = 16241289456 
+## 0.98523 0.05 
+## mtry = 6     OOB error = 1715233239 
+## 0.8943906 0.05
+\end{verbatim}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-8-2.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+              \CommentTok{#localImp = TRUE)}
+\KeywordTok{print}\NormalTok{(res2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+##  randomForest(x = x, y = y, mtry = res[which.min(res[, 2]), 1],      importance = TRUE, stepfactor = 0.5) 
+##                Type of random forest: regression
+##                      Number of trees: 500
+## No. of variables tried at each split: 6
+## 
+##           Mean of squared residuals: 1355209009
+##                     % Var explained: 100
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(res2)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-8-3.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{res2$importance}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                         %IncMSE IncNodePurity
+## Year               8.579820e+11  6.849186e+13
+## month             -3.274544e+10  1.883829e+10
+## StateCollege_PRCP  4.678427e+09  2.393336e+10
+## Lebanon_PRCP       3.499059e+10  1.863356e+10
+## Selinsgrove_PRCP  -8.042994e+09  1.105070e+11
+## WetDollars         9.075158e+13  7.776690e+15
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{varImpPlot}\NormalTok{(res2)                      }
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-8-4.pdf}
+\#\# Dry Acres
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Split into trainning, validation, and test sets}
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{25}\NormalTok{)}
+\NormalTok{assignment <-}\StringTok{ }\KeywordTok{sample}\NormalTok{(}\DecValTok{1}\NormalTok{:}\DecValTok{3}\NormalTok{, }\DataTypeTok{size =} \KeywordTok{nrow}\NormalTok{(DryAcres), }\DataTypeTok{prob =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.7}\NormalTok{, }\FloatTok{0.15}\NormalTok{, }\FloatTok{0.15}\NormalTok{), }\DataTypeTok{replace =} \OtherTok{TRUE}\NormalTok{)}
+
+\NormalTok{Drytrain <-}\StringTok{ }\NormalTok{DryAcres[assignment ==}\StringTok{ }\DecValTok{1}\NormalTok{,]}
+\NormalTok{Dryvalid <-}\StringTok{ }\NormalTok{DryAcres[assignment ==}\StringTok{ }\DecValTok{2}\NormalTok{,]}
+\NormalTok{Drytest <-}\StringTok{ }\NormalTok{DryAcres[assignment ==}\StringTok{ }\DecValTok{3}\NormalTok{,]}
+
+\KeywordTok{summary}\NormalTok{(Drytrain)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       Year          month        StateCollege_PRCP  Lebanon_PRCP   
+##  Min.   :2001   Min.   : 1.000   Min.   : 1.620    Min.   : 0.910  
+##  1st Qu.:2005   1st Qu.: 4.000   1st Qu.: 5.270    1st Qu.: 6.335  
+##  Median :2009   Median : 7.000   Median : 8.050    Median : 9.330  
+##  Mean   :2009   Mean   : 6.638   Mean   : 8.831    Mean   : 9.718  
+##  3rd Qu.:2014   3rd Qu.:10.000   3rd Qu.:11.370    3rd Qu.:12.145  
+##  Max.   :2018   Max.   :12.000   Max.   :26.840    Max.   :39.150  
+##  Selinsgrove_PRCP    DryAcres       
+##  Min.   : 2.060   Min.   :   557.8  
+##  1st Qu.: 5.400   1st Qu.: 16050.8  
+##  Median : 7.920   Median : 80698.0  
+##  Mean   : 8.842   Mean   :117531.2  
+##  3rd Qu.:11.660   3rd Qu.:174858.0  
+##  Max.   :32.740   Max.   :613635.8
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{summary}\NormalTok{(Dryvalid)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       Year          month        StateCollege_PRCP  Lebanon_PRCP   
+##  Min.   :2001   Min.   : 1.000   Min.   : 1.56     Min.   : 1.190  
+##  1st Qu.:2007   1st Qu.: 3.000   1st Qu.: 5.99     1st Qu.: 5.692  
+##  Median :2012   Median : 6.000   Median : 7.82     Median : 9.090  
+##  Mean   :2011   Mean   : 6.077   Mean   : 9.17     Mean   :11.616  
+##  3rd Qu.:2015   3rd Qu.: 9.000   3rd Qu.:12.43     3rd Qu.:15.155  
+##  Max.   :2018   Max.   :12.000   Max.   :22.57     Max.   :45.690  
+##  Selinsgrove_PRCP    DryAcres       
+##  Min.   : 0.000   Min.   :   557.8  
+##  1st Qu.: 5.675   1st Qu.: 19810.8  
+##  Median : 8.850   Median : 77513.5  
+##  Mean   :10.449   Mean   :115677.5  
+##  3rd Qu.:12.215   3rd Qu.:216408.0  
+##  Max.   :48.100   Max.   :613635.8
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{summary}\NormalTok{(Drytest)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       Year          month        StateCollege_PRCP  Lebanon_PRCP  
+##  Min.   :2002   Min.   : 1.000   Min.   : 2.940    Min.   : 2.31  
+##  1st Qu.:2004   1st Qu.: 4.000   1st Qu.: 6.495    1st Qu.: 6.39  
+##  Median :2008   Median : 6.000   Median : 9.260    Median :10.04  
+##  Mean   :2009   Mean   : 6.074   Mean   : 9.480    Mean   :11.22  
+##  3rd Qu.:2014   3rd Qu.: 8.000   3rd Qu.:10.905    3rd Qu.:12.82  
+##  Max.   :2018   Max.   :12.000   Max.   :19.730    Max.   :33.07  
+##  Selinsgrove_PRCP    DryAcres       
+##  Min.   : 0.200   Min.   :   557.8  
+##  1st Qu.: 5.165   1st Qu.: 10143.4  
+##  Median : 8.960   Median : 74329.0  
+##  Mean   : 9.075   Mean   :106350.5  
+##  3rd Qu.:11.850   3rd Qu.:136717.0  
+##  Max.   :26.700   Max.   :613635.8
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{Mod3 <-}\StringTok{ }\KeywordTok{randomForest}\NormalTok{(DryAcres ~}\StringTok{ }\NormalTok{., }
+                     \DataTypeTok{data =} \NormalTok{Drytrain, }
+                     \DataTypeTok{ntree =} \DecValTok{500}\NormalTok{, }
+                     \CommentTok{#method = "anova", }
+                     \DataTypeTok{importance =} \OtherTok{TRUE}\NormalTok{)}
+
+\KeywordTok{print}\NormalTok{(Mod3)                                 }\CommentTok{# % of variance expalined is low. Tuning needed}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+##  randomForest(formula = DryAcres ~ ., data = Drytrain, ntree = 500,      importance = TRUE) 
+##                Type of random forest: regression
+##                      Number of trees: 500
+## No. of variables tried at each split: 1
+## 
+##           Mean of squared residuals: 10588143143
+##                     % Var explained: 48.68
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{summary}\NormalTok{(Mod3)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                 Length Class  Mode     
+## call              5    -none- call     
+## type              1    -none- character
+## predicted       163    -none- numeric  
+## mse             500    -none- numeric  
+## rsq             500    -none- numeric  
+## oob.times       163    -none- numeric  
+## importance       10    -none- numeric  
+## importanceSD      5    -none- numeric  
+## localImportance   0    -none- NULL     
+## proximity         0    -none- NULL     
+## ntree             1    -none- numeric  
+## mtry              1    -none- numeric  
+## forest           11    -none- list     
+## coefs             0    -none- NULL     
+## y               163    -none- numeric  
+## test              0    -none- NULL     
+## inbag             0    -none- NULL     
+## terms             3    terms  call
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(Mod3)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-9-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pred3 <-}\StringTok{ }\KeywordTok{predict}\NormalTok{(}\DataTypeTok{object =} \NormalTok{Mod3, }\DataTypeTok{newdata =} \NormalTok{Drytest)}
+\NormalTok{RMSE_Mod3 <-}\StringTok{ }\KeywordTok{rmse}\NormalTok{(}\DataTypeTok{actual =} \NormalTok{Drytest$DryAcres, }\CommentTok{#actual values}
+     \DataTypeTok{predicted =} \NormalTok{pred3)                        }\CommentTok{#predicted values}
+\KeywordTok{print}\NormalTok{(RMSE_Mod3/}\KeywordTok{mean}\NormalTok{(Drytest$DryAcres))      }\CommentTok{#tells us the %of the mean represented by RMSE. AKA "coefficient of variation"}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 1.034596
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Tune mtry using OOB error}
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{25}\NormalTok{)}
+\CommentTok{#train_pred <- predict(object = Mod1, newdata = PAtrain)}
+\NormalTok{res3 <-}\StringTok{ }\KeywordTok{tuneRF}\NormalTok{(}\DataTypeTok{x =} \NormalTok{Drytrain,}
+              \DataTypeTok{y =} \NormalTok{Drytrain$DryAcres,}
+              \DataTypeTok{ntree =} \DecValTok{500}\NormalTok{,}
+              \DataTypeTok{stepfactor =} \FloatTok{0.5}\NormalTok{,}
+              \DataTypeTok{doBest=}\OtherTok{TRUE}\NormalTok{,        }\CommentTok{# Returns a random forest model with optimal mtry value}
+              \DataTypeTok{importance =} \OtherTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## mtry = 2  OOB error = 375443571 
+## Searching left ...
+## mtry = 1     OOB error = 3148461497 
+## -7.385978 0.05 
+## Searching right ...
+## mtry = 4     OOB error = 7126065 
+## 0.9810196 0.05 
+## mtry = 6     OOB error = 1283593 
+## 0.8198736 0.05
+\end{verbatim}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-9-2.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+              \CommentTok{#localImp = TRUE)}
+\KeywordTok{print}\NormalTok{(res3)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+##  randomForest(x = x, y = y, mtry = res[which.min(res[, 2]), 1],      importance = TRUE, stepfactor = 0.5) 
+##                Type of random forest: regression
+##                      Number of trees: 500
+## No. of variables tried at each split: 6
+## 
+##           Mean of squared residuals: 344393.2
+##                     % Var explained: 100
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(res3)         }\CommentTok{# looks pretty choppy?}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-9-3.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{res3$importance}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                         %IncMSE IncNodePurity
+## Year               3.408075e+07  2.555319e+09
+## month              3.531430e+05  2.042610e+04
+## StateCollege_PRCP -5.826061e+04  3.869144e+05
+## Lebanon_PRCP       4.122111e+07  1.712351e+07
+## Selinsgrove_PRCP   1.101792e+07  1.132820e+06
+## DryAcres           4.068888e+10  3.363626e+12
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{varImpPlot}\NormalTok{(res3)                      }
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-9-4.pdf}
+
+\subsection{Dry Dollars}\label{dry-dollars}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Split into trainning, validation, and test sets}
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{25}\NormalTok{)}
+\NormalTok{assignment <-}\StringTok{ }\KeywordTok{sample}\NormalTok{(}\DecValTok{1}\NormalTok{:}\DecValTok{3}\NormalTok{, }\DataTypeTok{size =} \KeywordTok{nrow}\NormalTok{(DryDollars), }\DataTypeTok{prob =} \KeywordTok{c}\NormalTok{(}\FloatTok{0.7}\NormalTok{, }\FloatTok{0.15}\NormalTok{, }\FloatTok{0.15}\NormalTok{), }\DataTypeTok{replace =} \OtherTok{TRUE}\NormalTok{)}
+
+\NormalTok{Drytrain2 <-}\StringTok{ }\NormalTok{DryDollars[assignment ==}\StringTok{ }\DecValTok{1}\NormalTok{,]}
+\NormalTok{Dryvalid2 <-}\StringTok{ }\NormalTok{DryDollars[assignment ==}\StringTok{ }\DecValTok{2}\NormalTok{,]}
+\NormalTok{Drytest2 <-}\StringTok{ }\NormalTok{DryDollars[assignment ==}\StringTok{ }\DecValTok{3}\NormalTok{,]}
+
+\KeywordTok{summary}\NormalTok{(Drytrain2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       Year          month        StateCollege_PRCP  Lebanon_PRCP   
+##  Min.   :2001   Min.   : 1.000   Min.   : 1.620    Min.   : 0.910  
+##  1st Qu.:2005   1st Qu.: 4.000   1st Qu.: 5.270    1st Qu.: 6.335  
+##  Median :2009   Median : 7.000   Median : 8.050    Median : 9.330  
+##  Mean   :2009   Mean   : 6.638   Mean   : 8.831    Mean   : 9.718  
+##  3rd Qu.:2014   3rd Qu.:10.000   3rd Qu.:11.370    3rd Qu.:12.145  
+##  Max.   :2018   Max.   :12.000   Max.   :26.840    Max.   :39.150  
+##  Selinsgrove_PRCP   DryDollars      
+##  Min.   : 2.060   Min.   :   77650  
+##  1st Qu.: 5.400   1st Qu.: 1592471  
+##  Median : 7.920   Median :11030151  
+##  Mean   : 8.842   Mean   :12920912  
+##  3rd Qu.:11.660   3rd Qu.:17790895  
+##  Max.   :32.740   Max.   :54954463
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{summary}\NormalTok{(Dryvalid2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       Year          month        StateCollege_PRCP  Lebanon_PRCP   
+##  Min.   :2001   Min.   : 1.000   Min.   : 1.56     Min.   : 1.190  
+##  1st Qu.:2007   1st Qu.: 3.000   1st Qu.: 5.99     1st Qu.: 5.692  
+##  Median :2012   Median : 6.000   Median : 7.82     Median : 9.090  
+##  Mean   :2011   Mean   : 6.077   Mean   : 9.17     Mean   :11.616  
+##  3rd Qu.:2015   3rd Qu.: 9.000   3rd Qu.:12.43     3rd Qu.:15.155  
+##  Max.   :2018   Max.   :12.000   Max.   :22.57     Max.   :45.690  
+##  Selinsgrove_PRCP   DryDollars      
+##  Min.   : 0.000   Min.   :   77650  
+##  1st Qu.: 5.675   1st Qu.: 2282997  
+##  Median : 8.850   Median : 8585168  
+##  Mean   :10.449   Mean   :13427212  
+##  3rd Qu.:12.215   3rd Qu.:17790895  
+##  Max.   :48.100   Max.   :54954463
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{summary}\NormalTok{(Drytest2)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##       Year          month        StateCollege_PRCP  Lebanon_PRCP  
+##  Min.   :2002   Min.   : 1.000   Min.   : 2.940    Min.   : 2.31  
+##  1st Qu.:2004   1st Qu.: 4.000   1st Qu.: 6.495    1st Qu.: 6.39  
+##  Median :2008   Median : 6.000   Median : 9.260    Median :10.04  
+##  Mean   :2009   Mean   : 6.074   Mean   : 9.480    Mean   :11.22  
+##  3rd Qu.:2014   3rd Qu.: 8.000   3rd Qu.:10.905    3rd Qu.:12.82  
+##  Max.   :2018   Max.   :12.000   Max.   :19.730    Max.   :33.07  
+##  Selinsgrove_PRCP   DryDollars      
+##  Min.   : 0.200   Min.   :   77650  
+##  1st Qu.: 5.165   1st Qu.:  986961  
+##  Median : 8.960   Median : 5463886  
+##  Mean   : 9.075   Mean   :11417461  
+##  3rd Qu.:11.850   3rd Qu.:12737743  
+##  Max.   :26.700   Max.   :54954463
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{Mod4 <-}\StringTok{ }\KeywordTok{randomForest}\NormalTok{(DryDollars ~}\StringTok{ }\NormalTok{., }
+                     \DataTypeTok{data =} \NormalTok{Drytrain2, }
+                     \DataTypeTok{ntree =} \DecValTok{500}\NormalTok{, }
+                     \CommentTok{#method = "anova", }
+                     \DataTypeTok{importance =} \OtherTok{TRUE}\NormalTok{)}
+
+\KeywordTok{print}\NormalTok{(Mod4)                                 }\CommentTok{# % of variance expalined is low. Tuning needed}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+##  randomForest(formula = DryDollars ~ ., data = Drytrain2, ntree = 500,      importance = TRUE) 
+##                Type of random forest: regression
+##                      Number of trees: 500
+## No. of variables tried at each split: 1
+## 
+##           Mean of squared residuals: 1.54949e+14
+##                     % Var explained: 29.39
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{summary}\NormalTok{(Mod4)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                 Length Class  Mode     
+## call              5    -none- call     
+## type              1    -none- character
+## predicted       163    -none- numeric  
+## mse             500    -none- numeric  
+## rsq             500    -none- numeric  
+## oob.times       163    -none- numeric  
+## importance       10    -none- numeric  
+## importanceSD      5    -none- numeric  
+## localImportance   0    -none- NULL     
+## proximity         0    -none- NULL     
+## ntree             1    -none- numeric  
+## mtry              1    -none- numeric  
+## forest           11    -none- list     
+## coefs             0    -none- NULL     
+## y               163    -none- numeric  
+## test              0    -none- NULL     
+## inbag             0    -none- NULL     
+## terms             3    terms  call
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(Mod4)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-10-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pred4 <-}\StringTok{ }\KeywordTok{predict}\NormalTok{(}\DataTypeTok{object =} \NormalTok{Mod4, }\DataTypeTok{newdata =} \NormalTok{Drytest2)}
+\NormalTok{RMSE_Mod4 <-}\StringTok{ }\KeywordTok{rmse}\NormalTok{(}\DataTypeTok{actual =} \NormalTok{Drytest2$DryDollars, }\CommentTok{#actual values}
+     \DataTypeTok{predicted =} \NormalTok{pred4)                        }\CommentTok{#predicted values}
+\KeywordTok{print}\NormalTok{(RMSE_Mod4/}\KeywordTok{mean}\NormalTok{(Drytest2$DryDollars))      }\CommentTok{#tells us the %of the mean represented by RMSE. AKA "coefficient of variation"}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 1.092932
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{# Tune mtry using OOB error}
+\KeywordTok{set.seed}\NormalTok{(}\DecValTok{25}\NormalTok{)}
+\CommentTok{#train_pred <- predict(object = Mod1, newdata = PAtrain)}
+\NormalTok{res4 <-}\StringTok{ }\KeywordTok{tuneRF}\NormalTok{(}\DataTypeTok{x =} \NormalTok{Drytrain2,}
+              \DataTypeTok{y =} \NormalTok{Drytrain2$DryDollars,}
+              \DataTypeTok{ntree =} \DecValTok{500}\NormalTok{,}
+              \DataTypeTok{stepfactor =} \FloatTok{0.5}\NormalTok{,}
+              \DataTypeTok{doBest=}\OtherTok{TRUE}\NormalTok{,        }\CommentTok{# Returns a random forest model with optimal mtry value}
+              \DataTypeTok{importance =} \OtherTok{TRUE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## mtry = 2  OOB error = 6.736511e+12 
+## Searching left ...
+## mtry = 1     OOB error = 3.753115e+13 
+## -4.571304 0.05 
+## Searching right ...
+## mtry = 4     OOB error = 297907682694 
+## 0.9557772 0.05 
+## mtry = 6     OOB error = 17967396216 
+## 0.939688 0.05
+\end{verbatim}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-10-2.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+              \CommentTok{#localImp = TRUE)}
+\KeywordTok{print}\NormalTok{(res4)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+##  randomForest(x = x, y = y, mtry = res[which.min(res[, 2]), 1],      importance = TRUE, stepfactor = 0.5) 
+##                Type of random forest: regression
+##                      Number of trees: 500
+## No. of variables tried at each split: 6
+## 
+##           Mean of squared residuals: 9454798682
+##                     % Var explained: 100
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{plot}\NormalTok{(res4)         }\CommentTok{# looks pretty choppy?}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-10-3.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{res4$importance}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                         %IncMSE IncNodePurity
+## Year               1.713391e+13  1.581166e+15
+## month              1.378753e+10  8.809838e+11
+## StateCollege_PRCP -1.767504e+11  1.531783e+12
+## Lebanon_PRCP       8.771209e+10  2.434308e+10
+## Selinsgrove_PRCP   1.089086e+11  1.199370e+11
+## DryDollars         4.401359e+14  3.398425e+16
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\KeywordTok{varImpPlot}\NormalTok{(res4)                      }
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-10-4.pdf}
+
+\section{Other optinos for fine tuning the model using control
+function}\label{other-optinos-for-fine-tuning-the-model-using-control-function}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -545,8 +1282,8 @@ function}\label{fine-tune-model-using-control-function}
 ##                      Number of trees: 500
 ## No. of variables tried at each split: 5
 ## 
-##           Mean of squared residuals: 120962643
-##                     % Var explained: 96.67
+##           Mean of squared residuals: 131875755
+##                     % Var explained: 96.37
 \end{verbatim}
 
 \begin{Shaded}
@@ -583,7 +1320,7 @@ function}\label{fine-tune-model-using-control-function}
 \end{Highlighting}
 \end{Shaded}
 
-\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-8-1.pdf}
+\includegraphics{data_setup_02102019_files/figure-latex/unnamed-chunk-11-1.pdf}
 
 \begin{Shaded}
 \begin{Highlighting}[]
@@ -595,7 +1332,7 @@ function}\label{fine-tune-model-using-control-function}
 \end{Shaded}
 
 \begin{verbatim}
-## [1] 0.1588864
+## [1] 0.1633907
 \end{verbatim}
 
 \begin{Shaded}
