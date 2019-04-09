@@ -26,6 +26,7 @@ library(randomForestExplainer)
 ## https://www.r-bloggers.com/how-to-implement-random-forests-in-r/
 ## https://cran.r-project.org/web/packages/randomForest/randomForest.pdf 
 ## https://rpubs.com/mbaumer/randomForest 
+## https://cran.rstudio.com/web/packages/randomForestExplainer/vignettes/randomForestExplainer.html
 
 
 ```{r}
@@ -153,12 +154,25 @@ res <- tuneRF(x = Wettrain,
 print(res)
 plot(res)
 res$importance
-varImpPlot(res)                                                     # Need this for pub
+varImpPlot(res, main = "Important variables for PA Wet Acres")      # Need this for pub
 MDSplot(res, fac = Wettrain$WetAcre, k=2, palette = NULL, pch = 20) # Need this for pub
+```
 
+```{r}
 # using randomForestExplainer
-min_depth_frame <- min_depth_distribution(res)
-plot_min_depth_distribution(min_depth_frame, mean_sample = "relevant_trees")
+min_depth_frame_wetacres <- min_depth_distribution(res)
+plot_min_depth_distribution(min_depth_frame_wetacres, mean_sample = "relevant_trees")
+importance_frame_wetacres <- measure_importance(res) 
+print(importance_frame_wetacres)
+
+#Use ggpairs to determine which informative information from the importance frame
+plot_importance_ggpairs(importance_frame_wetacres) #the two LEAST negative correlations in top row are the winners (?)
+
+# pvalue used to determine whether the actual number of splits using this variable exceeds what would be expect if the splits were random.
+plot_multi_way_importance(importance_frame_wetacres, x_measure = "mse_increase", y_measure = 
+                            "node_purity_increase", size_measure = "p_value", no_of_labels = 5, main = "PA Wet Acres") #top 5 variables are labeled
+
+
 ```
 
 ## Wet Dollars
@@ -177,7 +191,7 @@ Wettest2 <- WetDollars[assignment == 3,]
 
 
 Mod2 <- randomForest(WetDollars ~ ., 
-                     data = Wettrain2, 
+                     data = Wettrain2,
                      ntree = 500, 
                      #method = "anova", 
                      importance = TRUE)
@@ -198,6 +212,7 @@ set.seed(25)
 res2 <- tuneRF(x = Wettrain2,
               y = Wettrain2$WetDollars,
               ntree = 500,
+              proximity = TRUE,   # includes a proximity matrix (how often 2 variables end up in the same terminal node)
               stepfactor = 0.5,
               doBest=TRUE,        # Returns a random forest model with optimal mtry value
               importance = TRUE)
@@ -205,7 +220,24 @@ res2 <- tuneRF(x = Wettrain2,
 print(res2)
 plot(res2)
 res2$importance
-varImpPlot(res2)                      
+varImpPlot(res2, main = "Important variables for PA Wet Dollars")  
+```
+
+
+```{r}
+# using randomForestExplainer
+min_depth_frame_wetdollars <- min_depth_distribution(res2)
+plot_min_depth_distribution(min_depth_frame_wetdollars, mean_sample = "relevant_trees")
+importance_frame_wetdollars <- measure_importance(res2) 
+print(importance_frame_wetdollars)
+
+#Use ggpairs to determine which informative information from the importance frame
+plot_importance_ggpairs(importance_frame_wetdollars) #the two LEAST negative correlations in top row are the winners (?)
+
+# pvalue used to determine whether the actual number of splits using this variable exceeds what would be expect if the splits were random.
+plot_multi_way_importance(importance_frame_wetdollars, x_measure = "mse_increase", y_measure = 
+                            "node_purity_increase", size_measure = "p_value", no_of_labels = 5, main = "PA Wet Dollars") #top 5 variables are labeled
+
 ```
 ## Dry Acres
 ```{r}
@@ -251,7 +283,23 @@ res3 <- tuneRF(x = Drytrain,
 print(res3)
 plot(res3)         # looks pretty choppy?
 res3$importance
-varImpPlot(res3)                      
+varImpPlot(res3, main = "Important variables for PA Dry Acres")                      
+```
+
+```{r}
+# using randomForestExplainer
+min_depth_frame_dryacres <- min_depth_distribution(res3)
+plot_min_depth_distribution(min_depth_frame_dryacres, mean_sample = "relevant_trees")
+importance_frame_dryacres <- measure_importance(res3) 
+print(importance_frame_dryacres)
+
+#Use ggpairs to determine which informative information from the importance frame
+plot_importance_ggpairs(importance_frame_dryacres) #the two LEAST negative correlations in top row are the winners (?)
+
+# pvalue used to determine whether the actual number of splits using this variable exceeds what would be expect if the splits were random.
+plot_multi_way_importance(importance_frame_dryacres, x_measure = "mse_increase", y_measure = 
+                            "node_purity_increase", size_measure = "p_value", no_of_labels = 5, main = "PA Dry Acres") #top 5 variables are labeled
+
 ```
 
 ## Dry Dollars
@@ -298,8 +346,22 @@ res4 <- tuneRF(x = Drytrain2,
 print(res4)
 plot(res4)         # looks pretty choppy?
 res4$importance
-varImpPlot(res4)                      
+varImpPlot(res4, main = "PA Dry Dollars")                      
 ```
+```{r}
+# using randomForestExplainer
+min_depth_frame_drydollars <- min_depth_distribution(res4)
+plot_min_depth_distribution(min_depth_frame_drydollars, mean_sample = "relevant_trees")
+importance_frame_drydollars <- measure_importance(res4) 
+print(importance_frame_drydollars)
 
+#Use ggpairs to determine which informative information from the importance frame
+plot_importance_ggpairs(importance_frame_drydollars) #the two LEAST negative correlations in top row are the winners (?)
+
+# pvalue used to determine whether the actual number of splits using this variable exceeds what would be expect if the splits were random.
+plot_multi_way_importance(importance_frame_drydollars, x_measure = "mse_increase", y_measure = 
+                            "node_purity_increase", size_measure = "p_value", no_of_labels = 5, main = "PA Dry Acres") #top 5 variables are labeled
+
+```
 
 ################################################### End of Script #######################################################
