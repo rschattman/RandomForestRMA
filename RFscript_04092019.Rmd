@@ -1,0 +1,305 @@
+---
+title: "PA trial #2 - averaged weather stations"
+author: "Rachel Schattman"
+date: "April 9, 2019"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# load libraries
+```{r, echo=FALSE}
+library(dplyr)
+library(plyr)
+library(randomForest)
+library(Metrics)
+library(rpart)
+library(knitr)
+library(randomForestExplainer)
+```
+
+# Helpful resources:
+## https://www.r-bloggers.com/how-to-implement-random-forests-in-r/
+## https://cran.r-project.org/web/packages/randomForest/randomForest.pdf 
+## https://rpubs.com/mbaumer/randomForest 
+
+
+```{r}
+script_path <- "C:/Users/rschattman/Documents/Research/RandomForestRMA/data"
+in_dir <- "C:/Users/rschattman/Documents/Research/RandomForestRMA/data"
+out_dir <- "C:/Users/rschattman/Documents/Research/RandomForestRMA/output/data"
+```
+
+# Read in data and combine into single dataframe
+```{r, echo=FALSE}
+PAcip <- read.csv(file = "C:/Users/rschattman/Documents/Research/RandomForestRMA/data/monthly_prcp_PA.csv", header = TRUE, sep = ",")
+PAloss <- read.csv(file = "C:/Users/rschattman/Documents/Research/RandomForestRMA/data/PAannuallosses.csv", header = TRUE, sep = ",")
+PAbeta <-merge(PAcip, PAloss)
+PAbeta_wide <- reshape(data = PAbeta, 
+                  v.names = c("StateCollege_PRCP","Lebanon_PRCP","Selinsgrove_PRCP"),        #break out each weather station by month
+                  idvar = "Year",
+                  timevar = "month",
+                  times = seq_along(varying[[1]]),
+                  direction = "wide")
+
+# Create columns to average all 3 weather stations by month
+PAbeta_wide["JAN"]<-NA 
+PAbeta_wide$JAN <- (PAbeta_wide$StateCollege_PRCP.1+PAbeta_wide$Lebanon_PRCP.1+PAbeta_wide$Selinsgrove_PRCP.1)/3  
+
+PAbeta_wide["FEB"]<-NA 
+PAbeta_wide$FEB <- (PAbeta_wide$StateCollege_PRCP.2+PAbeta_wide$Lebanon_PRCP.2+PAbeta_wide$Selinsgrove_PRCP.2)/3  
+
+PAbeta_wide["MAR"]<-NA 
+PAbeta_wide$MAR <- (PAbeta_wide$StateCollege_PRCP.3+PAbeta_wide$Lebanon_PRCP.3+PAbeta_wide$Selinsgrove_PRCP.3)/3  
+
+PAbeta_wide["APR"]<-NA 
+PAbeta_wide$APR <- (PAbeta_wide$StateCollege_PRCP.4+PAbeta_wide$Lebanon_PRCP.4+PAbeta_wide$Selinsgrove_PRCP.4)/3  
+
+PAbeta_wide["MAY"]<-NA 
+PAbeta_wide$MAY <- (PAbeta_wide$StateCollege_PRCP.5+PAbeta_wide$Lebanon_PRCP.5+PAbeta_wide$Selinsgrove_PRCP.5)/3  
+
+PAbeta_wide["JUN"]<-NA 
+PAbeta_wide$JUN <- (PAbeta_wide$StateCollege_PRCP.6+PAbeta_wide$Lebanon_PRCP.6+PAbeta_wide$Selinsgrove_PRCP.6)/3  
+
+PAbeta_wide["JUL"]<-NA 
+PAbeta_wide$JUL <- (PAbeta_wide$StateCollege_PRCP.7+PAbeta_wide$Lebanon_PRCP.7+PAbeta_wide$Selinsgrove_PRCP.7)/3  
+
+PAbeta_wide["AUG"]<-NA 
+PAbeta_wide$AUG <- (PAbeta_wide$StateCollege_PRCP.8+PAbeta_wide$Lebanon_PRCP.8+PAbeta_wide$Selinsgrove_PRCP.8)/3  
+
+PAbeta_wide["SEP"]<-NA 
+PAbeta_wide$SEP <- (PAbeta_wide$StateCollege_PRCP.9+PAbeta_wide$Lebanon_PRCP.9+PAbeta_wide$Selinsgrove_PRCP.9)/3  
+
+PAbeta_wide["OCT"]<-NA 
+PAbeta_wide$OCT <- (PAbeta_wide$StateCollege_PRCP.10+PAbeta_wide$Lebanon_PRCP.10+PAbeta_wide$Selinsgrove_PRCP.10)/3  
+
+PAbeta_wide["NOV"]<-NA 
+PAbeta_wide$NOV <- (PAbeta_wide$StateCollege_PRCP.11+PAbeta_wide$Lebanon_PRCP.11+PAbeta_wide$Selinsgrove_PRCP.11)/3  
+
+PAbeta_wide["DEC"]<-NA 
+PAbeta_wide$DEC <- (PAbeta_wide$StateCollege_PRCP.12+PAbeta_wide$Lebanon_PRCP.12+PAbeta_wide$Selinsgrove_PRCP.12)/3
+
+# eliminate station data, maintain averaged monthly data
+head(PAbeta_wide)
+PAbeta_wide <- PAbeta_wide[,c("Year", "WetDollars", "WetAcres", "DryDollars", "DryAcres", "JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC")]
+```
+
+# Create new data frames with one dependent variable
+```{r}
+#head(PAbeta_wide)
+WetAcres <- PAbeta_wide[,c(1,3,6:17)]  #subset year, dependent variable, and all precip columes
+WetDollars <- PAbeta_wide[,c(1,2,6:17)]
+DryAcres <- PAbeta_wide[,c(1,5,6:17)]
+DryDollars <- PAbeta_wide[,c(1,4,6:17)]
+ 
+```
+
+# Review data
+```{r, echo=FALSE}
+#head(WetAcres)
+#str(WetAcres)
+#summary(WetAcres)
+```
+
+# Split into trainning, validation, and test sets
+```{r, echo=FALSE}
+set.seed(25)
+assignment <- sample(1:3, size = nrow(WetAcres), prob = c(0.7, 0.15, 0.15), replace = TRUE)
+
+Wettrain <- WetAcres[assignment == 1,]
+Wetvalid <- WetAcres[assignment == 2,]
+Wettest <- WetAcres[assignment == 3,]
+
+#summary(Wettrain)
+#summary(Wetvalid)
+#summary(Wettest)
+```
+
+# Create Random Forest Model and test performance metrics
+## Wet Acres
+```{r}
+Mod1 <- randomForest(WetAcres ~ ., 
+                     data = Wettrain, 
+                     ntree = 500, 
+                     #method = "anova", 
+                     importance = TRUE)
+
+#print(Mod1)                                 # % of variance expalined is low. Tuning needed
+summary(Mod1)
+#plot(Mod1)
+
+pred <- predict(object = Mod1, newdata = Wettest)
+RMSE_Mod1 <- rmse(actual = Wettest$WetAcres, #actual values
+     predicted = pred)                       #predicted values
+print(RMSE_Mod1/mean(Wettest$WetAcres))      #tells us the %of the mean represented by RMSE. AKA "coefficient of variation"
+
+
+
+# Tune mtry using OOB error
+set.seed(25)
+#train_pred <- predict(object = Mod1, newdata = PAtrain)
+res <- tuneRF(x = Wettrain,
+              y = Wettrain$WetAcre,
+              proximity = TRUE,   # includes a proximity matrix (how often 2 variables end up in the same terminal node)
+              ntree = 500,
+              stepfactor = 0.5,
+              doBest=TRUE,        # Returns a random forest model with optimal mtry value
+              importance = TRUE)
+              #localImp = TRUE)
+print(res)
+plot(res)
+res$importance
+varImpPlot(res)                                                     # Need this for pub
+MDSplot(res, fac = Wettrain$WetAcre, k=2, palette = NULL, pch = 20) # Need this for pub
+
+# using randomForestExplainer
+min_depth_frame <- min_depth_distribution(res)
+plot_min_depth_distribution(min_depth_frame, mean_sample = "relevant_trees")
+```
+
+## Wet Dollars
+```{r}
+# Split into trainning, validation, and test sets
+set.seed(25)
+assignment <- sample(1:3, size = nrow(WetDollars), prob = c(0.7, 0.15, 0.15), replace = TRUE)
+
+Wettrain2 <- WetDollars[assignment == 1,]
+Wetvalid2 <- WetDollars[assignment == 2,]
+Wettest2 <- WetDollars[assignment == 3,]
+
+#summary(Wettrain2)
+#summary(Wetvalid2)
+#summary(Wettest2)
+
+
+Mod2 <- randomForest(WetDollars ~ ., 
+                     data = Wettrain2, 
+                     ntree = 500, 
+                     #method = "anova", 
+                     importance = TRUE)
+
+#print(Mod2)                                 # % of variance expalined is low. Tuning needed
+#summary(Mod2)
+#plot(Mod2)
+
+pred2 <- predict(object = Mod2, newdata = Wettest2)
+RMSE_Mod2 <- rmse(actual = Wettest2$WetDollars, #actual values
+     predicted = pred2)                        #predicted values
+print(RMSE_Mod2/mean(Wettest2$WetDollars))      #tells us the %of the mean represented by RMSE. AKA "coefficient of variation"
+
+
+# Tune mtry using OOB error
+set.seed(25)
+#train_pred <- predict(object = Mod1, newdata = PAtrain)
+res2 <- tuneRF(x = Wettrain2,
+              y = Wettrain2$WetDollars,
+              ntree = 500,
+              stepfactor = 0.5,
+              doBest=TRUE,        # Returns a random forest model with optimal mtry value
+              importance = TRUE)
+              #localImp = TRUE)
+print(res2)
+plot(res2)
+res2$importance
+varImpPlot(res2)                      
+```
+## Dry Acres
+```{r}
+# Split into trainning, validation, and test sets
+set.seed(25)
+assignment <- sample(1:3, size = nrow(DryAcres), prob = c(0.7, 0.15, 0.15), replace = TRUE)
+
+Drytrain <- DryAcres[assignment == 1,]
+Dryvalid <- DryAcres[assignment == 2,]
+Drytest <- DryAcres[assignment == 3,]
+
+#summary(Drytrain)
+#summary(Dryvalid)
+#summary(Drytest)
+
+
+Mod3 <- randomForest(DryAcres ~ ., 
+                     data = Drytrain, 
+                     ntree = 500, 
+                     #method = "anova", 
+                     importance = TRUE)
+
+#print(Mod3)                                 # % of variance expalined is low. Tuning needed
+#summary(Mod3)
+#plot(Mod3)
+
+pred3 <- predict(object = Mod3, newdata = Drytest)
+RMSE_Mod3 <- rmse(actual = Drytest$DryAcres, #actual values
+     predicted = pred3)                        #predicted values
+print(RMSE_Mod3/mean(Drytest$DryAcres))      #tells us the %of the mean represented by RMSE. AKA "coefficient of variation"
+
+
+# Tune mtry using OOB error
+set.seed(25)
+#train_pred <- predict(object = Mod1, newdata = PAtrain)
+res3 <- tuneRF(x = Drytrain,
+              y = Drytrain$DryAcres,
+              ntree = 500,
+              stepfactor = 0.5,
+              doBest=TRUE,        # Returns a random forest model with optimal mtry value
+              importance = TRUE)
+              #localImp = TRUE)
+print(res3)
+plot(res3)         # looks pretty choppy?
+res3$importance
+varImpPlot(res3)                      
+```
+
+## Dry Dollars
+```{r}
+# Split into trainning, validation, and test sets
+set.seed(25)
+assignment <- sample(1:3, size = nrow(DryDollars), prob = c(0.7, 0.15, 0.15), replace = TRUE)
+
+Drytrain2 <- DryDollars[assignment == 1,]
+Dryvalid2 <- DryDollars[assignment == 2,]
+Drytest2 <- DryDollars[assignment == 3,]
+
+#summary(Drytrain2)
+#summary(Dryvalid2)
+#summary(Drytest2)
+
+
+Mod4 <- randomForest(DryDollars ~ ., 
+                     data = Drytrain2, 
+                     ntree = 500, 
+                     #method = "anova", 
+                     importance = TRUE)
+
+#print(Mod4)                                 # % of variance expalined is low. Tuning needed
+#summary(Mod4)
+#plot(Mod4)
+
+pred4 <- predict(object = Mod4, newdata = Drytest2)
+RMSE_Mod4 <- rmse(actual = Drytest2$DryDollars, #actual values
+     predicted = pred4)                        #predicted values
+print(RMSE_Mod4/mean(Drytest2$DryDollars))      #tells us the %of the mean represented by RMSE. AKA "coefficient of variation"
+
+
+# Tune mtry using OOB error
+set.seed(25)
+#train_pred <- predict(object = Mod1, newdata = PAtrain)
+res4 <- tuneRF(x = Drytrain2,
+              y = Drytrain2$DryDollars,
+              ntree = 500,
+              stepfactor = 0.5,
+              doBest=TRUE,        # Returns a random forest model with optimal mtry value
+              importance = TRUE)
+              #localImp = TRUE)
+print(res4)
+plot(res4)         # looks pretty choppy?
+res4$importance
+varImpPlot(res4)                      
+```
+
+
+################################################### End of Script #######################################################
