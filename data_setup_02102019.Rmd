@@ -85,7 +85,7 @@ PAbeta_wide$DEC <- (PAbeta_wide$StateCollege_PRCP.12+PAbeta_wide$Lebanon_PRCP.12
 ```
 
 # Create new data frames with one dependent variable
-``` {r}
+```{r}
 #head(PAbeta_wide)
 WetAcres <- PAbeta_wide[,c(1,4,9:56)]  #subset year, dependent variable, and all precip columes
 WetDollars <- PAbeta_wide[,c(1,3,9:56)]
@@ -140,6 +140,7 @@ set.seed(25)
 #train_pred <- predict(object = Mod1, newdata = PAtrain)
 res <- tuneRF(x = Wettrain,
               y = Wettrain$WetAcre,
+              proximity = TRUE,   # includes a proximity matrix (how often 2 variables end up in the same terminal node)
               ntree = 500,
               stepfactor = 0.5,
               doBest=TRUE,        # Returns a random forest model with optimal mtry value
@@ -148,7 +149,9 @@ res <- tuneRF(x = Wettrain,
 print(res)
 plot(res)
 res$importance
-varImpPlot(res)                      
+varImpPlot(res)                                                     # Need this for pub
+MDSplot(res, fac = Wettrain$WetAcre, k=2, palette = NULL, pch = 20) # Need this for pub
+
 ```
 
 ## Wet Dollars
