@@ -1,0 +1,41 @@
+---
+title: "RMA RF 05132019"
+author: "Rachel Schattman"
+date: "May 13, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# load libraries
+```{r, echo=FALSE}
+library(dplyr)
+library(plyr)
+library(randomForest)
+library(Metrics)
+library(rpart)
+library(knitr)
+library(randomForestExplainer)
+library(readr)
+library(tibble)
+```
+
+
+#Import RMA loss data by state
+```{r, echo=FALSE}
+
+RMAfiles <-
+  list.files(path = "C:/Users/rschattman/Documents/Research/RandomForestRMA/data/RMA_loss_05132019/",
+  pattern = "*.csv",
+  full.names = TRUE)
+
+RMAloss <- ldply(RMAfiles, read_csv)
+```
+# Add state abbreviations
+``` {r}
+states <- data.frame(read.csv(file = "C:/Users/rschattman/Documents/Research/RandomForestRMA/data/state_codes.csv"))
+RMAloss <- merge(states, RMAloss)
+```
