@@ -21,6 +21,7 @@ library(knitr)
 library(randomForestExplainer)
 library(readr)
 library(tibble)
+library(openintro)
 ```
 
 
@@ -35,7 +36,69 @@ RMAfiles <-
 RMAloss <- ldply(RMAfiles, read_csv)
 ```
 # Add state abbreviations
-``` {r}
+``` {r, echo = FALSE}
 states <- data.frame(read.csv(file = "C:/Users/rschattman/Documents/Research/RandomForestRMA/data/state_codes.csv"))
 RMAloss <- merge(states, RMAloss)
 ```
+
+# Import precip data
+```{r}
+precip <- data.frame(read.csv(file = "C:/Users/rschattman/Documents/Research/RandomForestRMA/data/Monthly_precip_by_state_1989_2018.csv"))
+# add column with State.Abbrv as head
+precip$State.Abbrv <- NA
+precip$State.Abbrv <- state2abbr(precip$State)  
+
+```
+# Bind datasets and drop unnecessary columns
+```{r}
+RMAprecip <- merge(precip, RMAloss, by = c("State.Abbrv", "Year"))
+RMAprecip <- select(RMAprecip, -c("State.x", "State.y"))
+RMAprecip <- na.omit(RMAprecip)
+```
+# Create new dataframes with one dependent variable each
+```{r, echo=FALSE}
+Drought_amount <- select(RMAprecip, -c("Wet$", "Droughtprop", "wetprop"))
+Wet_amount <- select(RMAprecip, -c("Drought$", "Droughtprop", "wetprop"))
+Drought_prop <- select(RMAprecip, -c("Wet$", "Drought$", "wetprop"))
+Wet_prop <- select(RMAprecip, -c("Wet$", "Droughtprop", "Drought$"))
+```
+# Divide into training, test, and verification sets
+```{r}
+set.seed(25)
+assignment <- sample(1:3, size = nrow(Drought_amount), prob = c(0.7, 0.15, 0.15), replace = TRUE)
+Drought_amount_train <- Drought_amount[assignment == 1,]
+Drought_amount_valid <- Drought_amount[assignment == 2,]
+Drought_amount_test <- Drought_amount[assignment == 3,]
+
+set.seed(25)
+assignment <- sample(1:3, size = nrow(Drought_prop), prob = c(0.7, 0.15, 0.15), replace = TRUE)
+Drought_prop_train <- Drought_prop[assignment == 1,]
+Drought_prop_valid <- Drought_prop[assignment == 2,]
+Drought_prop_test <- Drought_prop[assignment == 3,]
+
+set.seed(25)
+assignment <- sample(1:3, size = nrow(Wet_amount), prob = c(0.7, 0.15, 0.15), replace = TRUE)
+Wet_amount_train <- Wet_amount[assignment == 1,]
+Wet_amount_valid <- Wet_amount[assignment == 2,]
+Wet_amount_test <- Wet_amount[assignment == 3,]
+
+set.seed(25)
+assignment <- sample(1:3, size = nrow(Wet_prop), prob = c(0.7, 0.15, 0.15), replace = TRUE)
+Wet_prop_train <- Wet_prop[assignment == 1,]
+Wet_prop_valid <- Wet_prop[assignment == 2,]
+Wet_prop_test <- Wet_prop[assignment == 3,]
+```
+# Run RF Wet $ loss model
+```{r}
+# Tune mtry using OOB error
+set.seed(25)
+Wet_amount_MOD <- tuneRF(x = Wet_amount_train[,-15],
+              y = Wet_amount_train[,15],
+              proximity = TRUE,   # includes a proximity matrix (how often 2 variables end up in the same terminal node)
+              ntree = 500,
+              stepfactor = 0.5,
+              doBest=TRUE,        # Returns a random forest model with optimal mtry value
+              importance = TRUE)
+              #localImp = TRUE)
+```
+
