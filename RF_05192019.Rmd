@@ -1,7 +1,7 @@
 ---
 title: "RMA RF 05132019"
 author: "Rachel Schattman"
-date: "May 13, 2019"
+date: "June 5, 2019"
 output: html_document
 ---
 
@@ -36,7 +36,7 @@ RMAfiles <-
 RMAloss <- ldply(RMAfiles, read_csv)
 ```
 # Add state abbreviations
-``` {r, echo = FALSE}
+```{r}
 states <- data.frame(read.csv(file = "C:/Users/rschattman/Documents/Research/RandomForestRMA/data/state_codes.csv"))
 RMAloss <- merge(states, RMAloss)
 ```
@@ -47,12 +47,17 @@ precip <- data.frame(read.csv(file = "C:/Users/rschattman/Documents/Research/Ran
 # add column with State.Abbrv as head
 precip$State.Abbrv <- NA
 precip$State.Abbrv <- state2abbr(precip$State)  
-
 ```
 # Bind datasets and drop unnecessary columns
-```{r}
+```{r, echo=FALSE}
 RMAprecip <- merge(precip, RMAloss, by = c("State.Abbrv", "Year"))
 RMAprecip <- select(RMAprecip, -c("State.x", "State.y"))
+
+#some values in poportion imported with characters. Remove these values to have all numeric variables
+RMAprecip$wetprop <- as.numeric(as.character(RMAprecip$wetprop))
+RMAprecip$Droughtprop <- as.numeric(as.character(RMAprecip$Droughtprop))
+str(RMAprecip) #check that all are numberic (other than state abbreviations)
+
 RMAprecip <- na.omit(RMAprecip)
 ```
 # Create new dataframes with one dependent variable each
@@ -88,11 +93,30 @@ Wet_prop_train <- Wet_prop[assignment == 1,]
 Wet_prop_valid <- Wet_prop[assignment == 2,]
 Wet_prop_test <- Wet_prop[assignment == 3,]
 ```
+# Run RF Drought $ loss model
+```{r}
+# Tune mtry using OOB error
+set.seed(25)
+Drought_amount_MOD <- tuneRF(x = Drought_amount_train[, -c(15, 1)], #state name (column 1) throws model - convert to numeric?
+              y = Drought_amount_train[,15],
+              proximity = TRUE,   # includes a proximity matrix (how often 2 variables end up in the same terminal node)
+              ntree = 500,
+              stepfactor = 0.5,
+              doBest=TRUE,        # Returns a random forest model with optimal mtry value
+              importance = TRUE)
+              #localImp = TRUE)
+
+varImpPlot(Drought_amount_MOD, main = "Important variables for Drought Loss $")      # Need this for pub
+MDSplot(Drought_amount_MOD, fac = Drought_amount_train$`Drought$`, k=2, palette = NULL, pch = 20) # Need this for pub
+
+#Random Forest Explainer
+Drought_amount_RFE <- explain_forest(Drought_amount_MOD, interactions = FALSE, data = Drought_amount_train)
+```
 # Run RF Wet $ loss model
 ```{r}
 # Tune mtry using OOB error
 set.seed(25)
-Wet_amount_MOD <- tuneRF(x = Wet_amount_train[,-15],
+Wet_amount_MOD <- tuneRF(x = Wet_amount_train[, -c(15, 1)], #state name (column 1) throws model - convert to numeric?
               y = Wet_amount_train[,15],
               proximity = TRUE,   # includes a proximity matrix (how often 2 variables end up in the same terminal node)
               ntree = 500,
@@ -100,5 +124,48 @@ Wet_amount_MOD <- tuneRF(x = Wet_amount_train[,-15],
               doBest=TRUE,        # Returns a random forest model with optimal mtry value
               importance = TRUE)
               #localImp = TRUE)
-```
 
+varImpPlot(Wet_amount_MOD, main = "Important variables for Wet Loss $")      # Need this for pub
+MDSplot(Wet_amount_MOD, fac = Wet_amount_train$`Wet$`, k=2, palette = NULL, pch = 20) # Need this for pub
+
+#Random Forest Explainer
+Wet_amount_RFE <- explain_forest(Wet_amount_MOD, interactions = FALSE, data = Wet_amount_train)
+```
+# Run RF Drought proportion loss model
+```{r}
+# Tune mtry using OOB error
+set.seed(25)
+Drought_prop_MOD <- tuneRF(x = Drought_prop_train[, -c(15, 1)], #state name (column 1) throws model - convert to numeric?
+              y = Drought_prop_train[,15],
+              proximity = TRUE,   # includes a proximity matrix (how often 2 variables end up in the same terminal node)
+              ntree = 500,
+              stepfactor = 0.5,
+              doBest=TRUE,        # Returns a random forest model with optimal mtry value
+              importance = TRUE)
+              #localImp = TRUE)
+
+varImpPlot(Drought_prop_MOD, main = "Important variables for Drought Loss $")      # Need this for pub
+MDSplot(Drought_prop_MOD, fac = Drought_prop_train$`Drought_prop`, k=2, palette = NULL, pch = 20) # Need this for pub
+
+#Random Forest Explainer
+Drought_prop_RFE <- explain_forest(Drought_prop_MOD, interactions = FALSE, data = Drought_prop_train)
+```
+# Run RF Wet proportion loss model
+```{r}
+# Tune mtry using OOB error
+set.seed(25)
+Wet_prop_MOD <- tuneRF(x = Wet_prop_train[, -c(15, 1)], #state name (column 1) throws model - convert to numeric?
+              y = Wet_prop_train[,15],
+              proximity = TRUE,   # includes a proximity matrix (how often 2 variables end up in the same terminal node)
+              ntree = 500,
+              stepfactor = 0.5,
+              doBest=TRUE,        # Returns a random forest model with optimal mtry value
+              importance = TRUE)
+              #localImp = TRUE)
+
+varImpPlot(Wet_prop_MOD, main = "Important variables for Wet Loss $")      # Need this for pub
+MDSplot(Wet_prop_MOD, fac = Wet_prop_train$`Wet_prop`, k=2, palette = NULL, pch = 20) # Need this for pub
+
+#Random Forest Explainer
+Wet_prop_RFE <- explain_forest(Wet_prop_MOD, interactions = FALSE, data = Wet_prop_train)
+```
